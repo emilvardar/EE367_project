@@ -1,14 +1,16 @@
 import numpy as np
 import skimage
 import cv2
+from numba import jit, cuda
 from skimage.restoration import denoise_nl_means
+from timeit import default_timer as timer  
+
 
 # Global varaibles
 SIGMA = 0.1                 # Std
 NUM_OF_AVERAGE_FRAME = 2    # Number of frames for averaging in the local linear denoising
 SIGMANL = 0.05
 PATCH = 7
-
 
 def read_video():
     '''Reads the video and returns the frames in a list.'''
@@ -78,8 +80,8 @@ def video_maker(video_name, frames, shape, fps):
         out.write(cv2.imread('temp.jpg'))
     out.release()
 
-
 if __name__ == '__main__':
+    start = timer()
     frames, num_frames, shape, fps = read_video()
     noisy_frames = noise_adder(frames, num_frames)
     psnr_list = PSNR_calc(noisy_frames, frames)                                 # Gives the PSNR for the noisy images in the first case
@@ -99,3 +101,5 @@ if __name__ == '__main__':
     video_maker('noisy_video.avi', np.clip(noisy_frames,0,1)*255, shape, fps)  
     video_maker('averaged_denoised_video_lld.avi', np.clip(lld_frames,0,1)*255, shape, fps)
     video_maker('averaged_denoised_video_nlm.avi', np.clip(nlm_os_frames,0,1)*255, shape, fps)
+    end = timer()
+    print(end-start)
