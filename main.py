@@ -1,5 +1,4 @@
 '''
-Elin Byman and Emil Vardar
 
 The following code is for the final project for the course EE367: Computational Imaging given at Stanford University.
 The code compares 4 different denoising methods for videos. The denoised videos are saved and the PSNR for each denoised
