@@ -1,4 +1,5 @@
 '''
+Elin Byman and Emil Vardar
 
 The following code is for the final project for the course EE367: Computational Imaging given at Stanford University.
 The code compares 4 different denoising methods for videos. The denoised videos are saved and the PSNR for each denoised
@@ -14,13 +15,14 @@ from timeit import default_timer as timer
 import matplotlib.pyplot as plt
 
 # Global varaibles
-FILE_NAME = 'tennis_sif.y4m'
 SIGMA = 0.1                 # Standard deviation of noise
+DENOSE_FRAME_NUM = 5
+
 
 # For local linear algorithm using only averaging
 NUM_OF_AVERAGE_FRAME = 2    # Number of frames for averaging in the local linear
                             # denoising, excluding current frame. Should be an
-                            # even number?
+                            # even number? TODO
 
 # For local linear algorithm using gaussian weighting
 NUM_FRAMES = 5  # Number of frames used in the weighted averaging
@@ -46,9 +48,9 @@ NUM_FRAMES_ST = 3           # Neighborhood in temporal domain. If bigger than
                             # determines the neighborhood size in both spatial
                             # and temporal domain.
 
-def read_video():
+def read_video(file_name):
     '''Reads the video and returns the frames in a list.'''
-    vidcap = cv2.VideoCapture(FILE_NAME)   # Read in the video
+    vidcap = cv2.VideoCapture(file_name)   # Read in the video
     success,image = vidcap.read()
     count = 0
     frame_holder = []
@@ -89,24 +91,27 @@ def noise_adder(gt_frames, num_frames):
     return np.clip(noisy_frames_list,0,1) # Clip the frames so it is in the interval 0 to 1 ##TODO: Diskutera det här. Är det inte konstigt att klippa till 0,1? Tar bort en del noise?
 
 def local_linear_denoising(noisy_img, average_frame_num):
+    '''Denoise a video with local linear denoising method. See the paper for detail.'''
     mean_frame_list = []
     for i in range(len(noisy_img)):
         mean_frame = np.zeros_like(noisy_img[0])
 
         number_of_frames_averaged = 0
         for j in range(-int(average_frame_num/2), int(average_frame_num/2)+1): # Some frames before the actual frame and some frames after the actual frame
-            if (i+j >= 0) & (i+j < len(noisy_img)): #Ignore frames outside of range
+            if (i+j >= 0) & (i+j < len(noisy_img)): #Ignore frames outside the range
              mean_frame += noisy_img[i+j]
              number_of_frames_averaged += 1
 
         mean_frame_list.append(mean_frame/number_of_frames_averaged) # take the average
     return mean_frame_list
 
-def gauss(n=5,sigma=1):
+def gauss(n=5, sigma=1):
+    '''Create Gaussian weights'''
     r = range(-int(n/2),int(n/2)+1)
     return [1 / (sigma * np.sqrt(2*np.pi)) * np.exp(-float(x)**2/(2*sigma**2)) for x in r]
 
 def local_gaussian_denoising(noisy_img, kernel_size, sigma_gauss):
+    '''Denoise a video with local gaussian denoising method. See the paper for detail.'''
     mean_weighted_frame_list = []
     gaussian = gauss(n = kernel_size, sigma = sigma_gauss)
 
@@ -121,10 +126,10 @@ def local_gaussian_denoising(noisy_img, kernel_size, sigma_gauss):
 
         mean_frame = mean_frame/sum([gaussian[i] for i in used_indicies_of_gaussian]) # Normalize based on the weights used from the Gaussian 1D kernel
         mean_weighted_frame_list.append(mean_frame)
-
     return mean_weighted_frame_list
 
 def nlm_only_spatial(frames):
+    '''Denoise a video with Non-local means where only spatial information is used. See the paper for detail.'''
     nlm_denoised_frames = []
     for i in range(len(frames)):
         denoised_frame = denoise_nl_means(frames[i], h=np.sqrt(2)*SIGMANL, fast_mode=True, patch_size=PATCH, patch_distance=5, multichannel=True)
@@ -132,6 +137,7 @@ def nlm_only_spatial(frames):
     return nlm_denoised_frames
 
 def nlm_spatial_time(frames):
+    '''Denoise a video with Non-local means where both spatial and temporal information is used. See the paper for detail.'''
     nlm_denoised_frames = []
 
     for i in range(0,len(frames)):
@@ -158,35 +164,32 @@ def nlm_spatial_time(frames):
         print(i)
     return nlm_denoised_frames
 
-def video_maker_func(noisy_frames, lld_frames, lgd_frames, nlm_os_frames, nlm_st_frames, shape, fps):
+def video_maker_func(file_name, noisy_frames, lld_frames, lgd_frames, nlm_os_frames, nlm_st_frames, shape, fps):
     'Videos for qualitative comparision'
-    video_maker('noisy_video.avi', np.clip(noisy_frames,0,1)*255, shape, fps)  
-    video_maker('denoised_lld.avi', np.clip(lld_frames,0,1)*255, shape, fps)
-    video_maker('denoised_lld_lgd.avi', np.clip(lgd_frames,0,1)*255, shape, fps)
-    video_maker('denoised_lld_nlm_only_spatial.avi', np.clip(nlm_os_frames,0,1)*255, shape, fps)
-    video_maker('denoised_lld_nlm_spaial_and_time.avi', np.clip(nlm_st_frames,0,1)*255, shape, fps)
+    video_maker(file_name+'noisy_video.avi', np.clip(noisy_frames,0,1)*255, shape, fps)  
+    video_maker(file_name+'denoised_lld.avi', np.clip(lld_frames,0,1)*255, shape, fps)
+    video_maker(file_name+'denoised_lgd.avi', np.clip(lgd_frames,0,1)*255, shape, fps)
+    video_maker(file_name+'denoised_nlm_spatial.avi', np.clip(nlm_os_frames,0,1)*255, shape, fps)
+    video_maker(file_name+'denoised_nlm_time.avi', np.clip(nlm_st_frames,0,1)*255, shape, fps)
 
-def make_PSNR_plot(psnr_list, lld_PSNR, lgd_PSNR, nlm_PSNR, nlm_st_PSNR):
-    frame_number = np.arange(len(noisy_frames))
-    plt.plot(frame_number,psnr_list)
+def make_PSNR_plot(file_name, lld_PSNR, lgd_PSNR, nlm_PSNR, nlm_st_PSNR):
+    frame_number = np.arange(len(lld_PSNR))
     plt.plot(frame_number,lld_PSNR)
     plt.plot(frame_number,lgd_PSNR) 
     plt.plot(frame_number,nlm_PSNR)
     plt.plot(frame_number,nlm_st_PSNR)
-    plt.legend(['Noisy', 'Local Linear Denoising', 'Local Gaussian Denoising', 'NLM Denosing only spatial', 'NLM Denosing spatial and temporal'])
+    plt.legend(['LLD', 'LGD', 'NLM Spatial', 'NLM Spatial & Temporal'])
     plt.title('PSNR')
-    plt.ylim([15, 28])
-    plt.savefig('PSNR plot')
-    plt.show()
+    plt.ylim([16, 34])
+    plt.ylabel('PSNR in dB')
+    plt.xlabel('Frame #')
+    plt.savefig(file_name[0:4]+'PSNR plot')
 
-if __name__ == '__main__':
-    start = timer()
-
-    frames, num_frames, shape, fps = read_video()
+def do_everything(file_name):
+    frames, num_frames, shape, fps = read_video(file_name)
     
     noisy_frames = noise_adder(frames, num_frames)          # Add noise 
-    noisy_frames = noisy_frames[:5]                        # Shorten the video  # TODO: CHANGE THIS
-    psnr_list = PSNR_calc(noisy_frames, frames)             # Calc PSNR in the noisy video
+    noisy_frames = noisy_frames[:DENOSE_FRAME_NUM]          # Make all the videos equal long
     
     lld_frames = local_linear_denoising(noisy_frames, NUM_OF_AVERAGE_FRAME)      # Denoise with only averaging the pixel values
     lld_PSNR = PSNR_calc(lld_frames, frames)
@@ -200,16 +203,14 @@ if __name__ == '__main__':
     nlm_st_frames = nlm_spatial_time(noisy_frames)          # Denoise with NLM algorithm both in spatial domain and temporal domain
     nlm_st_PSNR = PSNR_calc(nlm_st_frames, frames)
 
-    #Print quantitative values for PSNR
-    print('Average PSNR before denoising: ', np.sum(psnr_list)/len(psnr_list), 
-    '\nAverage PSNR after denoising with local linear denoiser: ', np.sum(lld_PSNR)/len(lld_PSNR),
-    '\nAverage PSNR after denoising with local Gaussian denoiser: ', np.sum(lld_PSNR)/len(lld_PSNR),
-    '\nAverage PSNR after denoising with non-local linear denoiser only in spatial domain: ', np.sum(nlm_PSNR)/len(nlm_PSNR),
-    '\nAverage PSNR after denoising with non-local linear denoiser in spatial domain and time domain: ', np.sum(nlm_st_PSNR)/len(nlm_st_PSNR))  
-    
-    video_maker_func(noisy_frames, lld_frames, lgd_frames, nlm_os_frames, nlm_st_frames, shape, fps)
-    make_PSNR_plot(psnr_list, lld_PSNR, lgd_PSNR, nlm_PSNR, nlm_st_PSNR)
+    video_maker_func(file_name,noisy_frames, lld_frames, lgd_frames, nlm_os_frames, nlm_st_frames, shape, fps)
+    make_PSNR_plot(file_name, lld_PSNR, lgd_PSNR, nlm_PSNR, nlm_st_PSNR)
 
-    end = timer()
-    print('The time it took for running is: ', (end-start)/60, ' minutes.')
+if __name__ == '__main__':
+    file_names = ['football_cif.y4m', 'crew_cif.y4m', 'city_cif.y4m']
+    for i in range(3):
+        do_everything(file_names[i])
     
+   
+  
+  
