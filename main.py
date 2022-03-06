@@ -207,7 +207,7 @@ def do_everything(file_name):
     make_PSNR_plot(file_name, lld_PSNR, lgd_PSNR, nlm_PSNR, nlm_st_PSNR)
 
 if __name__ == '__main__':
-    file_names = ['football_cif.y4m', 'crew_cif.y4m', 'city_cif.y4m']
+    file_names = ['football_cif.y4m', 'crew_cif.y4m', 'city_cif.y4m'] # This files can be found at https://media.xiph.org/video/derf/
     for i in range(3):
         do_everything(file_names[i])
     
