@@ -21,8 +21,7 @@ DENOSE_FRAME_NUM = 5
 
 # For local linear algorithm using only averaging
 NUM_OF_AVERAGE_FRAME = 2    # Number of frames for averaging in the local linear
-                            # denoising, excluding current frame. Should be an
-                            # even number? TODO
+                            # denoising, excluding current frame.
 
 # For local linear algorithm using gaussian weighting
 NUM_FRAMES = 5  # Number of frames used in the weighted averaging
@@ -43,10 +42,8 @@ PATCH_DISTANCE = 5
 SIGMANL_ST = 0.05           # Standard deviation for the nlm algorithm
 PATCH_ST = 7                # Patch size
 PATCH_DISTANCE_ST = 5       # Size of neighborhood, expressed as a distance
-NUM_FRAMES_ST = 3           # Neighborhood in temporal domain. If bigger than
-                            # PATCH_DISTANCE_ST, then PATCH_DISTANCE_ST
-                            # determines the neighborhood size in both spatial
-                            # and temporal domain.
+NUM_FRAMES_ST = 3           # Neighborhood in temporal domain.
+
 
 def read_video(file_name):
     '''Reads the video and returns the frames in a list.'''
